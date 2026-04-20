@@ -1,261 +1,437 @@
-const loginSection = document.querySelector('#loginSection');
-const gameSection = document.querySelector('#gameSection');
-const loginForm = document.querySelector('#loginForm');
-const nameInput = document.querySelector('#nameInput');
-const emailInput = document.querySelector('#emailInput');
-const loginFeedbackEl = document.querySelector('#loginFeedback');
+const video = document.querySelector('#video');
+const canvas = document.querySelector('#overlayCanvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-const welcomeText = document.querySelector('#welcomeText');
-const scoreText = document.querySelector('#scoreText');
-const timerText = document.querySelector('#timerText');
-const topicSelect = document.querySelector('#topic');
-const difficultySelect = document.querySelector('#difficulty');
-const generateBtn = document.querySelector('#generateBtn');
-const card = document.querySelector('#card');
-const questionEl = document.querySelector('#question');
-const answersEl = document.querySelector('#answers');
-const feedbackEl = document.querySelector('#feedback');
+const sportPreset = document.querySelector('#sportPreset');
+const sourceMode = document.querySelector('#sourceMode');
+const modeText = document.querySelector('#modeText');
 
-const DIFFICULTY_TIME_LIMITS = {
-  easy: 30,
-  medium: 45,
-  hard: 60
+const videoUploadGroup = document.querySelector('#videoUploadGroup');
+const cameraGroup = document.querySelector('#cameraGroup');
+const videoFileInput = document.querySelector('#videoFileInput');
+const timeline = document.querySelector('#timeline');
+const playPauseBtn = document.querySelector('#playPauseBtn');
+const stepFrameBtn = document.querySelector('#stepFrameBtn');
+
+const cameraSelect = document.querySelector('#cameraSelect');
+const startCameraBtn = document.querySelector('#startCameraBtn');
+const stopCameraBtn = document.querySelector('#stopCameraBtn');
+
+const trackingState = document.querySelector('#trackingState');
+const objectText = document.querySelector('#objectText');
+const contactScoreEl = document.querySelector('#contactScore');
+const decisionText = document.querySelector('#decisionText');
+const fpsText = document.querySelector('#fpsText');
+
+const clearLogBtn = document.querySelector('#clearLogBtn');
+const eventLog = document.querySelector('#eventLog');
+
+const controlIds = [
+  'x1',
+  'y1',
+  'x2',
+  'y2',
+  'lineThickness',
+  'motionThreshold',
+  'lumaThreshold',
+  'bounceTurnThreshold',
+  'contactThreshold',
+  'cooldownFrames'
+];
+const controls = Object.fromEntries(controlIds.map((id) => [id, document.querySelector(`#${id}`)]));
+
+const PRESETS = {
+  'table-tennis': { x1: 25, y1: 76, x2: 82, y2: 76, lineThickness: 10, motionThreshold: 23, lumaThreshold: 140, bounceTurnThreshold: 7, contactThreshold: 12, cooldownFrames: 10 },
+  pickleball: { x1: 19, y1: 78, x2: 84, y2: 78, lineThickness: 14, motionThreshold: 20, lumaThreshold: 125, bounceTurnThreshold: 6, contactThreshold: 13, cooldownFrames: 10 },
+  padel: { x1: 22, y1: 80, x2: 86, y2: 80, lineThickness: 15, motionThreshold: 21, lumaThreshold: 122, bounceTurnThreshold: 6, contactThreshold: 15, cooldownFrames: 12 },
+  badminton: { x1: 18, y1: 73, x2: 88, y2: 73, lineThickness: 10, motionThreshold: 26, lumaThreshold: 135, bounceTurnThreshold: 9, contactThreshold: 16, cooldownFrames: 13 },
+  custom: { x1: 22, y1: 75, x2: 80, y2: 75, lineThickness: 14, motionThreshold: 28, lumaThreshold: 130, bounceTurnThreshold: 8, contactThreshold: 14, cooldownFrames: 12 }
 };
 
-const DIFFICULTY_BUCKETS = {
-  easy: [0, 5],
-  medium: [5, 10],
-  hard: [10, 15]
+const state = {
+  source: 'video-file',
+  stream: null,
+  prevFrame: null,
+  frameHistory: [],
+  cooldown: 0,
+  rafId: null,
+  frameCount: 0,
+  fpsStart: performance.now(),
+  eventCounter: 0,
+  lineClicks: []
 };
 
-const questionBank = {
-  science: [
-    { question: 'What planet is known as the Red Planet?', choices: ['Venus', 'Mars', 'Jupiter', 'Mercury'], answerIndex: 1, explanation: 'Mars appears red because of iron oxide on its surface.' },
-    { question: 'What is the chemical symbol for water?', choices: ['O2', 'H2O', 'CO2', 'NaCl'], answerIndex: 1, explanation: 'Water is made of hydrogen and oxygen: H2O.' },
-    { question: 'What gas do humans breathe in to survive?', choices: ['Nitrogen', 'Hydrogen', 'Oxygen', 'Helium'], answerIndex: 2, explanation: 'Humans need oxygen for cellular respiration.' },
-    { question: 'How many bones are in the adult human body?', choices: ['206', '198', '300', '151'], answerIndex: 0, explanation: 'Most adults have 206 bones.' },
-    { question: 'Which organ pumps blood through the body?', choices: ['Lungs', 'Liver', 'Heart', 'Kidney'], answerIndex: 2, explanation: 'The heart pumps blood throughout the body.' },
-    { question: 'What force keeps planets orbiting the sun?', choices: ['Magnetism', 'Gravity', 'Friction', 'Electricity'], answerIndex: 1, explanation: 'Gravity keeps planets in orbit around the sun.' },
-    { question: 'What is Earth’s natural satellite?', choices: ['Mars', 'Venus', 'The Moon', 'Europa'], answerIndex: 2, explanation: 'Earth has one natural satellite: the Moon.' },
-    { question: 'What is the boiling point of water at sea level?', choices: ['90°C', '80°C', '100°C', '120°C'], answerIndex: 2, explanation: 'At 1 atmosphere, water boils at 100°C.' },
-    { question: 'What process do plants use to make food?', choices: ['Digestion', 'Respiration', 'Photosynthesis', 'Fermentation'], answerIndex: 2, explanation: 'Plants make glucose via photosynthesis.' },
-    { question: 'Which blood cells help fight infection?', choices: ['Red blood cells', 'White blood cells', 'Platelets', 'Plasma cells'], answerIndex: 1, explanation: 'White blood cells are part of the immune system.' },
-    { question: 'Which part of the cell contains genetic material?', choices: ['Nucleus', 'Ribosome', 'Cell membrane', 'Cytoplasm'], answerIndex: 0, explanation: 'The nucleus stores DNA in most cells.' },
-    { question: 'What do bees collect from flowers?', choices: ['Pollen and nectar', 'Sand and water', 'Leaves and bark', 'Salt and sugar'], answerIndex: 0, explanation: 'Bees gather nectar and pollen for food and pollination.' },
-    { question: 'What is the nearest star to Earth?', choices: ['Sirius', 'Alpha Centauri', 'The Sun', 'Polaris'], answerIndex: 2, explanation: 'Our nearest star is the Sun.' },
-    { question: 'Which state of matter has a definite volume but no fixed shape?', choices: ['Solid', 'Liquid', 'Gas', 'Plasma'], answerIndex: 1, explanation: 'Liquids keep volume but take the shape of their container.' },
-    { question: 'What type of energy is stored in food?', choices: ['Nuclear energy', 'Chemical energy', 'Sound energy', 'Light energy'], answerIndex: 1, explanation: 'Food stores chemical energy in molecular bonds.' }
-  ],
-  history: [
-    { question: 'Who was the first President of the United States?', choices: ['Thomas Jefferson', 'George Washington', 'John Adams', 'James Madison'], answerIndex: 1, explanation: 'George Washington served as the first U.S. president.' },
-    { question: 'In what year did World War II end?', choices: ['1942', '1945', '1939', '1950'], answerIndex: 1, explanation: 'World War II ended in 1945.' },
-    { question: 'Which ancient civilization built the pyramids at Giza?', choices: ['Romans', 'Greeks', 'Egyptians', 'Mayans'], answerIndex: 2, explanation: 'The ancient Egyptians built the Giza pyramids.' },
-    { question: 'Who wrote the Declaration of Independence?', choices: ['Benjamin Franklin', 'George Washington', 'Thomas Jefferson', 'John Hancock'], answerIndex: 2, explanation: 'Thomas Jefferson was the primary author.' },
-    { question: 'Which ship famously sank in 1912?', choices: ['Lusitania', 'Mayflower', 'Titanic', 'Bismarck'], answerIndex: 2, explanation: 'The RMS Titanic sank in April 1912.' },
-    { question: 'Who is credited with discovering America in 1492?', choices: ['Leif Erikson', 'Christopher Columbus', 'Ferdinand Magellan', 'Marco Polo'], answerIndex: 1, explanation: 'Columbus reached the Americas in 1492.' },
-    { question: 'What wall fell in 1989, symbolizing the end of the Cold War?', choices: ['Great Wall of China', 'Hadrian’s Wall', 'Berlin Wall', 'Wailing Wall'], answerIndex: 2, explanation: 'The Berlin Wall fell in November 1989.' },
-    { question: 'The Renaissance began in which country?', choices: ['France', 'Italy', 'England', 'Spain'], answerIndex: 1, explanation: 'The Renaissance started in Italy.' },
-    { question: 'In which year did the U.S. Civil War begin?', choices: ['1861', '1859', '1865', '1870'], answerIndex: 0, explanation: 'The Civil War began in 1861.' },
-    { question: 'Which civilization created Machu Picchu?', choices: ['Aztec', 'Inca', 'Maya', 'Olmec'], answerIndex: 1, explanation: 'Machu Picchu was built by the Inca.' },
-    { question: 'Which empire was ruled by Julius Caesar?', choices: ['Greek Empire', 'Roman Republic', 'Ottoman Empire', 'Persian Empire'], answerIndex: 1, explanation: 'Julius Caesar was a leader in the Roman Republic.' },
-    { question: 'Who was known as the Maid of Orléans?', choices: ['Marie Curie', 'Joan of Arc', 'Catherine the Great', 'Queen Elizabeth I'], answerIndex: 1, explanation: 'Joan of Arc is known as the Maid of Orléans.' },
-    { question: 'What was the name of the trade route linking China and the Mediterranean?', choices: ['Spice Route', 'Silk Road', 'Amber Road', 'Royal Road'], answerIndex: 1, explanation: 'The Silk Road connected East and West trade.' },
-    { question: 'Who was the British prime minister during most of World War II?', choices: ['Neville Chamberlain', 'Winston Churchill', 'Clement Attlee', 'Margaret Thatcher'], answerIndex: 1, explanation: 'Winston Churchill led Britain through most of WWII.' },
-    { question: 'Who was the first woman to fly solo across the Atlantic Ocean?', choices: ['Sally Ride', 'Amelia Earhart', 'Valentina Tereshkova', 'Bessie Coleman'], answerIndex: 1, explanation: 'Amelia Earhart completed the solo flight in 1932.' }
-  ],
-  sports: [
-    { question: 'How many players are on a soccer team on the field at one time?', choices: ['9', '10', '11', '12'], answerIndex: 2, explanation: 'Each soccer team fields 11 players.' },
-    { question: 'How many points is a touchdown worth in American football?', choices: ['3', '6', '7', '2'], answerIndex: 1, explanation: 'A touchdown is worth 6 points before the extra attempt.' },
-    { question: 'How many bases are there on a baseball field?', choices: ['3', '4', '5', '6'], answerIndex: 1, explanation: 'There are 4 bases: first, second, third, and home.' },
-    { question: 'In basketball, how many points is a free throw worth?', choices: ['1', '2', '3', '4'], answerIndex: 0, explanation: 'A made free throw is worth 1 point.' },
-    { question: 'How many rings are on the Olympic flag?', choices: ['4', '5', '6', '7'], answerIndex: 1, explanation: 'The Olympic flag has 5 interlocking rings.' },
-    { question: 'Which sport uses a shuttlecock?', choices: ['Tennis', 'Squash', 'Badminton', 'Pickleball'], answerIndex: 2, explanation: 'Badminton is played with a shuttlecock.' },
-    { question: 'What country hosts the Tour de France?', choices: ['Spain', 'Italy', 'France', 'Belgium'], answerIndex: 2, explanation: 'The Tour de France is held primarily in France.' },
-    { question: 'In tennis, what is a score of zero called?', choices: ['Love', 'Nil', 'Blank', 'Zero'], answerIndex: 0, explanation: 'Zero points in tennis is called “love.”' },
-    { question: 'How long is an Olympic swimming pool?', choices: ['25 meters', '50 meters', '75 meters', '100 meters'], answerIndex: 1, explanation: 'Olympic pools are 50 meters long.' },
-    { question: 'In volleyball, how many players are on each side of the court?', choices: ['5', '6', '7', '8'], answerIndex: 1, explanation: 'Indoor volleyball has 6 players per side.' },
-    { question: 'What is the maximum score in a single frame of ten-pin bowling?', choices: ['20', '30', '40', '10'], answerIndex: 1, explanation: 'A strike followed by two strikes totals 30 in one frame.' },
-    { question: 'Which sport features the terms “checkmate” and “stalemate”?', choices: ['Checkers', 'Go', 'Chess', 'Fencing'], answerIndex: 2, explanation: 'Those terms are from chess.' },
-    { question: 'In golf, what is one stroke under par called?', choices: ['Bogey', 'Eagle', 'Birdie', 'Albatross'], answerIndex: 2, explanation: 'One under par is a birdie.' },
-    { question: 'Which country invented judo?', choices: ['China', 'Korea', 'Japan', 'Thailand'], answerIndex: 2, explanation: 'Judo was founded in Japan by Jigoro Kano.' },
-    { question: 'What piece of equipment is required in ice hockey to hit the puck?', choices: ['Bat', 'Racket', 'Club', 'Stick'], answerIndex: 3, explanation: 'Players use a hockey stick to move the puck.' }
-  ],
-  geography: [
-    { question: 'What is the largest ocean on Earth?', choices: ['Atlantic', 'Indian', 'Arctic', 'Pacific'], answerIndex: 3, explanation: 'The Pacific Ocean is the largest.' },
-    { question: 'What is the capital city of Japan?', choices: ['Kyoto', 'Osaka', 'Tokyo', 'Sapporo'], answerIndex: 2, explanation: 'Tokyo is the capital of Japan.' },
-    { question: 'Which continent is the Sahara Desert located on?', choices: ['Asia', 'Africa', 'Australia', 'South America'], answerIndex: 1, explanation: 'The Sahara spans much of North Africa.' },
-    { question: 'Which U.S. state is known as the “Sunshine State”?', choices: ['California', 'Arizona', 'Florida', 'Hawaii'], answerIndex: 2, explanation: 'Florida is nicknamed the Sunshine State.' },
-    { question: 'What is the capital of Canada?', choices: ['Toronto', 'Ottawa', 'Vancouver', 'Montreal'], answerIndex: 1, explanation: 'Ottawa is Canada’s capital city.' },
-    { question: 'Which country has the largest population as of 2026?', choices: ['China', 'India', 'United States', 'Indonesia'], answerIndex: 1, explanation: 'India remains the most populous country in 2026.' },
-    { question: 'What is the longest river in the world (commonly taught answer)?', choices: ['Amazon', 'Nile', 'Yangtze', 'Mississippi'], answerIndex: 1, explanation: 'Many school references list the Nile as longest.' },
-    { question: 'Mount Everest lies in which mountain range?', choices: ['Andes', 'Rockies', 'Himalayas', 'Alps'], answerIndex: 2, explanation: 'Everest is part of the Himalayas.' },
-    { question: 'Which country is both in Europe and Asia?', choices: ['Turkey', 'Portugal', 'Sweden', 'Ireland'], answerIndex: 0, explanation: 'Turkey spans both Europe and Asia.' },
-    { question: 'The Great Barrier Reef is off the coast of which country?', choices: ['Australia', 'New Zealand', 'Philippines', 'Fiji'], answerIndex: 0, explanation: 'It lies off northeastern Australia.' },
-    { question: 'Which line divides Earth into Northern and Southern Hemispheres?', choices: ['Prime Meridian', 'Tropic of Cancer', 'Equator', 'International Date Line'], answerIndex: 2, explanation: 'The Equator is the dividing line at 0° latitude.' },
-    { question: 'Which continent has the most countries?', choices: ['Europe', 'Africa', 'Asia', 'South America'], answerIndex: 1, explanation: 'Africa has the highest number of sovereign states.' },
-    { question: 'What is the smallest country in the world by area?', choices: ['Monaco', 'Nauru', 'Vatican City', 'San Marino'], answerIndex: 2, explanation: 'Vatican City is the smallest by land area.' },
-    { question: 'Which desert is the largest hot desert on Earth?', choices: ['Gobi', 'Kalahari', 'Sahara', 'Arabian'], answerIndex: 2, explanation: 'The Sahara is the largest hot desert.' },
-    { question: 'Which city is famously called the “City of Light”?', choices: ['Rome', 'Paris', 'Berlin', 'Madrid'], answerIndex: 1, explanation: 'Paris is often called the City of Light.' }
-  ]
-};
-
-let currentQuestion = null;
-let score = 0;
-let playerName = '';
-let timerId = null;
-let timeLeft = DIFFICULTY_TIME_LIMITS.easy;
-
-function resetCard() {
-  answersEl.innerHTML = '';
-  feedbackEl.textContent = '';
-  feedbackEl.className = 'feedback';
+function getNumber(id) {
+  return Number(controls[id].value);
 }
 
-function lockAnswers() {
-  answersEl.querySelectorAll('button').forEach((button) => {
-    button.disabled = true;
+function cfg() {
+  return {
+    x1: getNumber('x1') / 100,
+    y1: getNumber('y1') / 100,
+    x2: getNumber('x2') / 100,
+    y2: getNumber('y2') / 100,
+    lineThickness: getNumber('lineThickness'),
+    motionThreshold: getNumber('motionThreshold'),
+    lumaThreshold: getNumber('lumaThreshold'),
+    bounceTurnThreshold: getNumber('bounceTurnThreshold'),
+    contactThreshold: getNumber('contactThreshold'),
+    cooldownFrames: getNumber('cooldownFrames')
+  };
+}
+
+function applyPreset(key) {
+  const preset = PRESETS[key] || PRESETS.custom;
+  Object.entries(preset).forEach(([k, v]) => {
+    if (controls[k]) controls[k].value = v;
   });
 }
 
-function getQuestionsForSelection(topic, difficulty) {
-  const normalizedTopic = typeof topic === 'string' ? topic.toLowerCase() : 'science';
-  const topicKey = questionBank[normalizedTopic] ? normalizedTopic : 'science';
-  const difficultyKey = DIFFICULTY_BUCKETS[difficulty] ? difficulty : 'easy';
-  const [start, end] = DIFFICULTY_BUCKETS[difficultyKey];
-
-  return questionBank[topicKey].slice(start, end);
+function setMode(mode) {
+  state.source = mode;
+  const isVideoFile = mode === 'video-file';
+  videoUploadGroup.classList.toggle('hidden', !isVideoFile);
+  cameraGroup.classList.toggle('hidden', isVideoFile);
+  modeText.textContent = isVideoFile ? 'Uploaded Video' : 'Live Camera';
+  stopCamera();
+  video.pause();
+  state.prevFrame = null;
+  state.frameHistory = [];
+  trackingState.textContent = 'Idle';
 }
 
-function pickQuestion(topic, difficulty) {
-  const questions = getQuestionsForSelection(topic, difficulty);
-  return questions[Math.floor(Math.random() * questions.length)];
+function logEvent(text) {
+  const li = document.createElement('li');
+  li.textContent = text;
+  eventLog.prepend(li);
 }
 
-function getTimeLimitForDifficulty(difficulty) {
-  return DIFFICULTY_TIME_LIMITS[difficulty] || DIFFICULTY_TIME_LIMITS.easy;
+function nowLabel() {
+  return new Date().toLocaleTimeString();
 }
 
-function updateScoreText() {
-  scoreText.textContent = `Score: ${score}`;
+function pointSegmentDistance(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lengthSq = dx * dx + dy * dy;
+  if (!lengthSq) return Math.hypot(px - x1, py - y1);
+
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lengthSq));
+  const projX = x1 + t * dx;
+  const projY = y1 + t * dy;
+  return Math.hypot(px - projX, py - projY);
 }
 
-function updateTimerText() {
-  timerText.textContent = `Time left: ${timeLeft}s`;
+function drawLineGuide(config) {
+  const x1 = config.x1 * canvas.width;
+  const y1 = config.y1 * canvas.height;
+  const x2 = config.x2 * canvas.width;
+  const y2 = config.y2 * canvas.height;
+
+  ctx.save();
+  ctx.lineWidth = config.lineThickness;
+  ctx.strokeStyle = 'rgba(37, 99, 235, 0.92)';
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5, 5]);
+  ctx.strokeStyle = 'rgba(147, 197, 253, 0.95)';
+  ctx.beginPath();
+  ctx.arc(x1, y1, 7, 0, Math.PI * 2);
+  ctx.arc(x2, y2, 7, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
 }
 
-function stopTimer() {
-  if (timerId) {
-    clearInterval(timerId);
-    timerId = null;
+function analyzeFrame(curr, prev, config) {
+  const x1 = config.x1 * canvas.width;
+  const y1 = config.y1 * canvas.height;
+  const x2 = config.x2 * canvas.width;
+  const y2 = config.y2 * canvas.height;
+
+  let sumX = 0;
+  let sumY = 0;
+  let count = 0;
+  let nearLineCount = 0;
+
+  const stride = 3;
+  for (let i = 0; i < curr.data.length; i += 4 * stride) {
+    const idx = i / 4;
+    const px = idx % canvas.width;
+    const py = Math.floor(idx / canvas.width);
+
+    const dr = Math.abs(curr.data[i] - prev.data[i]);
+    const dg = Math.abs(curr.data[i + 1] - prev.data[i + 1]);
+    const db = Math.abs(curr.data[i + 2] - prev.data[i + 2]);
+    const motion = (dr + dg + db) / 3;
+    if (motion < config.motionThreshold) continue;
+
+    const luma = 0.2126 * curr.data[i] + 0.7152 * curr.data[i + 1] + 0.0722 * curr.data[i + 2];
+    if (luma < config.lumaThreshold) continue;
+
+    count += 1;
+    sumX += px;
+    sumY += py;
+
+    if (pointSegmentDistance(px, py, x1, y1, x2, y2) <= config.lineThickness / 2) {
+      nearLineCount += 1;
+    }
+  }
+
+  if (!count) {
+    return { found: false, x: null, y: null, nearLineCount: 0, contactScore: 0 };
+  }
+
+  const x = sumX / count;
+  const y = sumY / count;
+  const contactScore = nearLineCount * 0.7 + count * 0.1;
+
+  return { found: true, x, y, nearLineCount, contactScore, pixelCount: count };
+}
+
+function detectBounce(trackedY, config) {
+  if (state.frameHistory.length < 3) return false;
+  const [p2, p1, p0] = state.frameHistory.slice(-3);
+  const vyOld = p1.y - p2.y;
+  const vyNew = p0.y - p1.y;
+  const turnAmount = Math.abs(vyNew - vyOld);
+
+  const changedDirection = vyOld > 0 && vyNew < 0;
+  const lowEnough = trackedY > canvas.height * 0.35;
+
+  return changedDirection && turnAmount >= config.bounceTurnThreshold && lowEnough;
+}
+
+function decide(analysis, config) {
+  if (state.cooldown > 0) {
+    state.cooldown -= 1;
+    return;
+  }
+
+  const bounced = detectBounce(analysis.y, config);
+  if (!bounced) return;
+
+  const conf = Math.min(99, Math.round((analysis.contactScore / (config.contactThreshold * 2)) * 100));
+  const verdict = analysis.contactScore >= config.contactThreshold ? 'IN (line touched)' : 'OUT (missed line)';
+
+  decisionText.textContent = `${verdict} • ${conf}%`;
+  state.eventCounter += 1;
+  logEvent(`#${state.eventCounter} ${nowLabel()} | ${verdict} | score=${analysis.contactScore.toFixed(1)} conf=${conf}%`);
+
+  state.cooldown = config.cooldownFrames;
+}
+
+function syncFps() {
+  state.frameCount += 1;
+  const now = performance.now();
+  const elapsed = now - state.fpsStart;
+  if (elapsed >= 1000) {
+    fpsText.textContent = String(Math.round((state.frameCount * 1000) / elapsed));
+    state.frameCount = 0;
+    state.fpsStart = now;
   }
 }
 
-function revealAnswerAndFeedback(isCorrect, timedOut = false) {
-  answersEl.querySelectorAll('button').forEach((button, index) => {
-    if (index === currentQuestion.answerIndex) {
-      button.classList.add('correct');
+function drawTargetDot(x, y) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(34, 197, 94, 0.95)';
+  ctx.beginPath();
+  ctx.arc(x, y, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function processFrame() {
+  if (!video.videoWidth || !video.videoHeight) {
+    state.rafId = requestAnimationFrame(processFrame);
+    return;
+  }
+
+  if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+  }
+
+  const config = cfg();
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  if (state.prevFrame) {
+    const analysis = analyzeFrame(current, state.prevFrame, config);
+
+    if (analysis.found) {
+      objectText.textContent = `x=${analysis.x.toFixed(0)} y=${analysis.y.toFixed(0)} pixels=${analysis.pixelCount}`;
+      trackingState.textContent = 'Tracking target';
+      contactScoreEl.textContent = analysis.contactScore.toFixed(1);
+      drawTargetDot(analysis.x, analysis.y);
+
+      state.frameHistory.push({ x: analysis.x, y: analysis.y });
+      if (state.frameHistory.length > 12) state.frameHistory.shift();
+
+      decide(analysis, config);
     } else {
-      button.classList.add('wrong');
+      trackingState.textContent = 'Searching';
+      objectText.textContent = 'No target';
+      contactScoreEl.textContent = '0';
     }
+  } else {
+    trackingState.textContent = 'Warming up';
+  }
+
+  drawLineGuide(config);
+  state.prevFrame = current;
+  syncFps();
+  state.rafId = requestAnimationFrame(processFrame);
+}
+
+function stopLoop() {
+  if (state.rafId) cancelAnimationFrame(state.rafId);
+  state.rafId = null;
+}
+
+async function listCameras() {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  cameraSelect.innerHTML = '';
+  devices
+    .filter((d) => d.kind === 'videoinput')
+    .forEach((device, index) => {
+      const option = document.createElement('option');
+      option.value = device.deviceId;
+      option.textContent = device.label || `Camera ${index + 1}`;
+      cameraSelect.appendChild(option);
+    });
+}
+
+function stopCamera() {
+  stopLoop();
+  if (state.stream) {
+    state.stream.getTracks().forEach((track) => track.stop());
+    state.stream = null;
+  }
+}
+
+async function startCamera() {
+  stopCamera();
+  state.prevFrame = null;
+  state.frameHistory = [];
+
+  try {
+    state.stream = await navigator.mediaDevices.getUserMedia({
+      video: cameraSelect.value ? { deviceId: { exact: cameraSelect.value } } : true,
+      audio: false
+    });
+
+    video.srcObject = state.stream;
+    await video.play();
+    trackingState.textContent = 'Live';
+    processFrame();
+  } catch (error) {
+    trackingState.textContent = 'Camera error';
+    decisionText.textContent = error.message;
+  }
+}
+
+function loadVideoFile(file) {
+  if (!file) return;
+
+  stopCamera();
+  const objectUrl = URL.createObjectURL(file);
+  video.srcObject = null;
+  video.src = objectUrl;
+  video.load();
+
+  video.onloadedmetadata = () => {
+    timeline.value = '0';
+    state.prevFrame = null;
+    state.frameHistory = [];
+    trackingState.textContent = 'Video loaded';
+    video.play();
+    stopLoop();
+    processFrame();
+  };
+}
+
+function updateTimelineFromVideo() {
+  if (!video.duration || Number.isNaN(video.duration)) return;
+  timeline.value = String(Math.round((video.currentTime / video.duration) * 1000));
+}
+
+function seekFromTimeline() {
+  if (!video.duration || Number.isNaN(video.duration)) return;
+  video.currentTime = (Number(timeline.value) / 1000) * video.duration;
+}
+
+function stepOneFrame() {
+  const fpsGuess = 30;
+  video.pause();
+  video.currentTime = Math.min(video.duration || Number.MAX_SAFE_INTEGER, video.currentTime + 1 / fpsGuess);
+}
+
+function togglePlayPause() {
+  if (video.paused) {
+    video.play();
+  } else {
+    video.pause();
+  }
+}
+
+function updateLineFromClick(event) {
+  const rect = canvas.getBoundingClientRect();
+  const x = ((event.clientX - rect.left) / rect.width) * canvas.width;
+  const y = ((event.clientY - rect.top) / rect.height) * canvas.height;
+
+  state.lineClicks.push({ x, y });
+  if (state.lineClicks.length < 2) return;
+
+  const [p1, p2] = state.lineClicks.slice(-2);
+  controls.x1.value = String(Math.round((p1.x / canvas.width) * 100));
+  controls.y1.value = String(Math.round((p1.y / canvas.height) * 100));
+  controls.x2.value = String(Math.round((p2.x / canvas.width) * 100));
+  controls.y2.value = String(Math.round((p2.y / canvas.height) * 100));
+
+  state.lineClicks = [];
+  if (sportPreset.value !== 'custom') sportPreset.value = 'custom';
+}
+
+sportPreset.addEventListener('change', () => applyPreset(sportPreset.value));
+sourceMode.addEventListener('change', () => setMode(sourceMode.value));
+videoFileInput.addEventListener('change', (event) => loadVideoFile(event.target.files[0]));
+playPauseBtn.addEventListener('click', togglePlayPause);
+stepFrameBtn.addEventListener('click', stepOneFrame);
+timeline.addEventListener('input', seekFromTimeline);
+startCameraBtn.addEventListener('click', startCamera);
+stopCameraBtn.addEventListener('click', stopCamera);
+clearLogBtn.addEventListener('click', () => {
+  eventLog.innerHTML = '';
+  state.eventCounter = 0;
+});
+canvas.addEventListener('click', updateLineFromClick);
+video.addEventListener('timeupdate', updateTimelineFromVideo);
+window.addEventListener('beforeunload', stopCamera);
+
+for (const id of controlIds) {
+  controls[id].addEventListener('input', () => {
+    if (sportPreset.value !== 'custom') sportPreset.value = 'custom';
   });
+}
 
-  feedbackEl.classList.add(isCorrect ? 'correct' : 'wrong');
-
-  if (timedOut) {
-    feedbackEl.textContent = `⏰ Time is up! ${currentQuestion.explanation}`;
+(async function init() {
+  applyPreset('table-tennis');
+  setMode('video-file');
+  if (!navigator.mediaDevices?.getUserMedia) {
+    trackingState.textContent = 'No camera API support';
     return;
   }
 
-  feedbackEl.textContent = isCorrect
-    ? `✅ Correct! ${currentQuestion.explanation}`
-    : `❌ Not quite. ${currentQuestion.explanation}`;
-}
-
-function startQuestionTimer() {
-  stopTimer();
-  timeLeft = getTimeLimitForDifficulty(difficultySelect.value);
-  updateTimerText();
-
-  timerId = setInterval(() => {
-    timeLeft -= 1;
-    updateTimerText();
-
-    if (timeLeft <= 0) {
-      stopTimer();
-      lockAnswers();
-      revealAnswerAndFeedback(false, true);
-    }
-  }, 1000);
-}
-
-function renderQuestion(payload) {
-  currentQuestion = payload;
-  card.classList.remove('hidden');
-  resetCard();
-  questionEl.textContent = payload.question;
-
-  payload.choices.forEach((choice, index) => {
-    const btn = document.createElement('button');
-    btn.className = 'answer-btn';
-    btn.textContent = choice;
-    btn.addEventListener('click', () => handleAnswer(index));
-    answersEl.appendChild(btn);
-  });
-
-  startQuestionTimer();
-}
-
-function handleAnswer(selectedIndex) {
-  if (!currentQuestion || !timerId) return;
-
-  const isCorrect = selectedIndex === currentQuestion.answerIndex;
-  stopTimer();
-  lockAnswers();
-
-  if (isCorrect) {
-    score += 1;
-    updateScoreText();
+  try {
+    await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+  } catch {
+    // keep going; user may still use uploaded video.
   }
 
-  revealAnswerAndFeedback(isCorrect);
-}
-
-function generateQuestion() {
-  const question = pickQuestion(topicSelect.value, difficultySelect.value);
-  renderQuestion(question);
-}
-
-function syncTimerDisplayToDifficulty() {
-  if (timerId) return;
-  timeLeft = getTimeLimitForDifficulty(difficultySelect.value);
-  updateTimerText();
-}
-
-function startGame(event) {
-  event.preventDefault();
-
-  const trimmedName = nameInput.value.trim();
-  const trimmedEmail = emailInput.value.trim();
-
-  if (!trimmedName || !trimmedEmail) {
-    loginFeedbackEl.className = 'feedback wrong';
-    loginFeedbackEl.textContent = 'Please enter both name and email.';
-    return;
-  }
-
-  playerName = trimmedName;
-  loginFeedbackEl.textContent = '';
-  loginFeedbackEl.className = 'feedback';
-
-  welcomeText.textContent = `Welcome, ${playerName}!`;
-  score = 0;
-  updateScoreText();
-  syncTimerDisplayToDifficulty();
-
-  loginSection.classList.add('hidden');
-  gameSection.classList.remove('hidden');
-}
-
-loginForm.addEventListener('submit', startGame);
-difficultySelect.addEventListener('change', syncTimerDisplayToDifficulty);
-generateBtn.addEventListener('click', generateQuestion);
+  await listCameras();
+})();
