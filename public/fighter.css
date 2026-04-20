@@ -1,0 +1,165 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #d8e0e8, #bfcbd8 55%, #acb7c2);
+  color: #1f2933;
+}
+
+.game-shell {
+  width: min(96vw, 1060px);
+  padding: 1rem;
+  border-radius: 16px;
+  background: rgba(241, 244, 247, 0.95);
+  border: 1px solid #8b96a3;
+  box-shadow: 0 8px 24px rgba(27, 39, 53, 0.2);
+}
+
+h1 {
+  margin: 0;
+}
+
+.subtitle {
+  margin: 0.35rem 0 1rem;
+  color: #4b5563;
+}
+
+.hud {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.player-ui {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.player-ui.right {
+  justify-items: end;
+}
+
+.label,
+.rounds,
+.round-text {
+  margin: 0;
+  font-weight: 700;
+}
+
+.center-ui {
+  text-align: center;
+}
+
+.timer {
+  margin: 0.2rem 0;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #7c3f00;
+}
+
+.health-track {
+  width: min(38vw, 320px);
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid #9aa6b2;
+  background: #dde5ec;
+  overflow: hidden;
+}
+
+.health-fill {
+  height: 100%;
+  width: 100%;
+}
+
+.health-fill.p1 {
+  background: #2f7d57;
+}
+
+.health-fill.p2 {
+  background: #8a3f2f;
+}
+
+#arena {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid #7a8794;
+  display: block;
+  background: #c9d7e4;
+}
+
+button {
+  font: inherit;
+  border: none;
+  border-radius: 10px;
+  padding: 0.45rem 0.7rem;
+  background: #3d5d7a;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #334f67;
+}
+
+.message {
+  margin-top: 0.8rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-align: center;
+  min-height: 1.6rem;
+  color: #7c3f00;
+}
+
+.controls {
+  margin-top: 0.7rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.controls article {
+  background: #e8edf2;
+  border: 1px solid #bcc7d1;
+  border-radius: 10px;
+  padding: 0.5rem 0.8rem;
+}
+
+h2 {
+  font-size: 1rem;
+}
+
+ul {
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+@media (max-width: 760px) {
+  .hud {
+    grid-template-columns: 1fr;
+  }
+
+  .player-ui.right {
+    justify-items: start;
+  }
+
+  .health-track {
+    width: 100%;
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+  }
+}

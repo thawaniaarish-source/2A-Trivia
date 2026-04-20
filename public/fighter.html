@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arcade Clash</title>
+    <link rel="stylesheet" href="fighter.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <h1>Arcade Clash</h1>
+      <p class="subtitle">A grounded 1v1 fighting game with a more realistic presentation.</p>
+
+      <section class="hud" aria-live="polite">
+        <div class="player-ui">
+          <p class="label">Player 1</p>
+          <div class="health-track"><div id="p1Health" class="health-fill p1"></div></div>
+          <p id="p1Rounds" class="rounds">Rounds: 0</p>
+        </div>
+
+        <div class="center-ui">
+          <p id="roundText" class="round-text">Round 1</p>
+          <p id="timerText" class="timer">60</p>
+          <button id="restartBtn" type="button">Restart Match</button>
+        </div>
+
+        <div class="player-ui right">
+          <p class="label">Player 2</p>
+          <div class="health-track"><div id="p2Health" class="health-fill p2"></div></div>
+          <p id="p2Rounds" class="rounds">Rounds: 0</p>
+        </div>
+      </section>
+
+      <canvas id="arena" width="980" height="520" role="img" aria-label="2D fighting arena"></canvas>
+
+      <section id="message" class="message">Fight!</section>
+
+      <section class="controls">
+        <article>
+          <h2>Player 1 Controls</h2>
+          <ul>
+            <li>Move: A / D</li>
+            <li>Jump: W</li>
+            <li>Punch: F</li>
+            <li>Kick: G</li>
+            <li>Block: H</li>
+          </ul>
+        </article>
+        <article>
+          <h2>Player 2 Controls</h2>
+          <ul>
+            <li>Move: ← / →</li>
+            <li>Jump: ↑</li>
+            <li>Punch: K</li>
+            <li>Kick: L</li>
+            <li>Block: ;</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+
+    <script type="module" src="fighter.js"></script>
+  </body>
+</html>
