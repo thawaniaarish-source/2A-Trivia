@@ -3,63 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trivia App</title>
+    <title>2A Trivia Home</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="app">
-      <h1>Trivia App</h1>
-      <p class="subtitle">Pick a category, pick a difficulty, and answer one question at a time.</p>
+    <main class="home">
+      <h1>2A Trivia</h1>
+      <p class="subtitle">Main project topic: trivia learning game.</p>
 
-      <section id="loginSection" class="card auth-card">
-        <h2>Login</h2>
-        <p class="auth-subtitle">Enter your name and email to start playing.</p>
-        <form id="loginForm" class="auth-form">
-          <label for="nameInput">Name</label>
-          <input id="nameInput" type="text" placeholder="Your name" required />
-
-          <label for="emailInput">Email</label>
-          <input id="emailInput" type="email" placeholder="you@example.com" required />
-
-          <button type="submit" id="startBtn">Start Trivia</button>
-        </form>
-        <p id="loginFeedback" class="feedback"></p>
-      </section>
-
-      <section id="gameSection" class="hidden">
-        <section class="controls">
-          <div class="status-row">
-            <p id="welcomeText" class="status-pill">Welcome!</p>
-            <p id="scoreText" class="status-pill">Score: 0</p>
-            <p id="timerText" class="status-pill timer">Time left: 30s</p>
-          </div>
-
-          <label for="topic">Choose topic</label>
-          <select id="topic">
-            <option value="science">Science</option>
-            <option value="history">History</option>
-            <option value="sports">Sports</option>
-            <option value="geography">Geography</option>
-          </select>
-
-          <label for="difficulty">Choose difficulty</label>
-          <select id="difficulty">
-            <option value="easy">Easy (30s)</option>
-            <option value="medium">Medium (45s)</option>
-            <option value="hard">Hard (60s)</option>
-          </select>
-
-          <button id="generateBtn">Generate Trivia Question</button>
-        </section>
-
-        <section id="card" class="card hidden" aria-live="polite">
-          <h2 id="question"></h2>
-          <div id="answers" class="answers"></div>
-          <p id="feedback" class="feedback"></p>
-        </section>
+      <section class="card">
+        <h2>Topics</h2>
+        <ul>
+          <li><a href="/trivia.html">Trivia topic (main app)</a></li>
+          <li><a href="/line-judge/">Line Judge topic (separate prototype)</a></li>
+        </ul>
       </section>
     </main>
-
-    <script type="module" src="app.js"></script>
   </body>
 </html>

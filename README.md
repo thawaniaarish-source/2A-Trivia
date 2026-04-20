@@ -1,33 +1,20 @@
-# Trivia App (Static)
+# 2A Trivia + Separate Line Judge Topic
 
-A fully static trivia app for learning basic web app development and immediate UI feedback.
+This repository now keeps **2A Trivia** as the main topic and hosts the line-call prototype as a **separate topic**.
 
-## Features
+## Routes
 
-- Login form with **name** and **email** before gameplay.
-- Choose a category: Science, History, Sports, or Geography.
-- Choose a difficulty level:
-  - **Easy**: easier questions, **30 seconds** per question
-  - **Medium**: tougher than easy, **45 seconds** per question
-  - **Hard**: tougher than medium, **60 seconds** per question
-- 15 built-in questions per category, split by difficulty buckets.
-- One question shown at a time.
-- **Score counter** that increases by 1 only when the selected answer is correct.
-- Click an answer to instantly see:
-  - the correct answer in green
-  - all incorrect answers in red
-  - a short explanation
-- No backend/API required.
+- `http://localhost:3000/` → Topic selector home
+- `http://localhost:3000/trivia.html` → 2A Trivia topic (main)
+- `http://localhost:3000/line-judge/` → FairCall Line Judge topic (separate)
 
-## Run locally
+## Why this change
 
-Because the app is static, you can run it in either of these ways:
+The line-call analyzer is no longer mixed into the main 2A Trivia page.
+It has been isolated under its own folder and route so the two projects are clearly separated.
 
-1. Open `public/index.html` directly in your browser.
-2. Or use any static file server, for example:
+## Run
 
 ```bash
 npm start
 ```
-
-Then open `http://localhost:3000`.
