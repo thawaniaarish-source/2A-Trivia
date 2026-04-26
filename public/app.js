@@ -15,6 +15,8 @@ const flashText = document.querySelector('#flashText');
 const countText = document.querySelector('#countText');
 const fpsText = document.querySelector('#fpsText');
 const eventLog = document.querySelector('#eventLog');
+const verdictIcon = document.querySelector('#verdictIcon');
+const verdictText = document.querySelector('#verdictText');
 
 const state = {
   stream: null,
@@ -23,7 +25,9 @@ const state = {
   flashCount: 0,
   cooldownLeft: 0,
   frameCount: 0,
-  fpsStart: performance.now()
+  fpsStart: performance.now(),
+  visibilityHistory: [],
+  lastPoint: null
 };
 
 function getConfig() {
@@ -34,15 +38,33 @@ function getConfig() {
   };
 }
 
+function setVerdict(isFirefly) {
+  if (isFirefly) {
+    verdictIcon.textContent = '✓';
+    verdictIcon.className = 'verdict-icon good';
+    verdictText.textContent = 'Firefly detected';
+  } else {
+    verdictIcon.textContent = '✕';
+    verdictIcon.className = 'verdict-icon bad';
+    verdictText.textContent = 'Not a firefly';
+  }
+}
+
+function setNeutralVerdict() {
+  verdictIcon.textContent = '•';
+  verdictIcon.className = 'verdict-icon';
+  verdictText.textContent = 'Waiting for subject';
+}
+
 function logEvent(message) {
   const li = document.createElement('li');
   li.textContent = `${new Date().toLocaleTimeString()} — ${message}`;
   eventLog.prepend(li);
 }
 
-function drawMarker(x, y) {
+function drawMarker(x, y, color = 'rgba(250, 204, 21, 0.95)') {
   ctx.save();
-  ctx.fillStyle = 'rgba(250, 204, 21, 0.95)';
+  ctx.fillStyle = color;
   ctx.beginPath();
   ctx.arc(x, y, 8, 0, Math.PI * 2);
   ctx.fill();
@@ -85,6 +107,21 @@ function analyzeFrame(current, previous, config) {
   };
 }
 
+function likelyFirefly(analysis) {
+  const smallMovingGlow = analysis.score >= 8 && analysis.score <= 140;
+
+  const previousVisible = state.visibilityHistory[state.visibilityHistory.length - 1] ?? false;
+  const blinkLike = analysis.found && !previousVisible;
+
+  let movement = 0;
+  if (state.lastPoint) {
+    movement = Math.hypot(analysis.x - state.lastPoint.x, analysis.y - state.lastPoint.y);
+  }
+
+  const movementLooksNatural = movement <= 220;
+  return smallMovingGlow && blinkLike && movementLooksNatural;
+}
+
 function syncFps() {
   state.frameCount += 1;
   const now = performance.now();
@@ -116,20 +153,34 @@ function processFrame() {
 
     if (analysis.found) {
       statusText.textContent = 'Scanning';
-      drawMarker(analysis.x, analysis.y);
+      const isFirefly = likelyFirefly(analysis);
+      setVerdict(isFirefly);
+      drawMarker(analysis.x, analysis.y, isFirefly ? 'rgba(74, 222, 128, 0.95)' : 'rgba(248, 113, 113, 0.95)');
 
       if (state.cooldownLeft > 0) {
         state.cooldownLeft -= 1;
-      } else if (analysis.score >= 10) {
-        state.flashCount += 1;
-        state.cooldownLeft = config.cooldownFrames;
-        countText.textContent = String(state.flashCount);
+      } else {
         flashText.textContent = `x=${analysis.x.toFixed(0)}, y=${analysis.y.toFixed(0)} (score ${analysis.score})`;
-        logEvent(`Likely firefly flash detected (score ${analysis.score})`);
+        if (isFirefly) {
+          state.flashCount += 1;
+          countText.textContent = String(state.flashCount);
+          logEvent('✓ Firefly detected');
+        } else {
+          logEvent('✕ Not a firefly');
+        }
+        state.cooldownLeft = config.cooldownFrames;
       }
+
+      state.lastPoint = { x: analysis.x, y: analysis.y };
     } else {
       statusText.textContent = 'Watching for flashes';
+      setNeutralVerdict();
+      flashText.textContent = 'None';
+      state.lastPoint = null;
     }
+
+    state.visibilityHistory.push(analysis.found);
+    if (state.visibilityHistory.length > 10) state.visibilityHistory.shift();
   } else {
     statusText.textContent = 'Warming up camera';
   }
@@ -151,6 +202,7 @@ function stopCamera() {
     state.stream = null;
   }
   statusText.textContent = 'Stopped';
+  setNeutralVerdict();
 }
 
 async function listCameras() {
@@ -170,6 +222,8 @@ async function listCameras() {
 async function startCamera() {
   stopCamera();
   state.prevFrame = null;
+  state.visibilityHistory = [];
+  state.lastPoint = null;
 
   try {
     state.stream = await navigator.mediaDevices.getUserMedia({
@@ -180,10 +234,12 @@ async function startCamera() {
     video.srcObject = state.stream;
     await video.play();
     statusText.textContent = 'Live detection running';
+    setNeutralVerdict();
     processFrame();
   } catch (error) {
     statusText.textContent = 'Camera unavailable';
     flashText.textContent = error.message;
+    setVerdict(false);
   }
 }
 

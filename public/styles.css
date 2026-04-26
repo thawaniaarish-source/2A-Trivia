@@ -147,3 +147,36 @@ button.secondary {
     grid-template-columns: 1fr;
   }
 }
+
+.verdict {
+  margin-top: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  background: #020617;
+}
+
+.verdict-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  background: #334155;
+  color: #cbd5e1;
+}
+
+.verdict-icon.good {
+  background: #14532d;
+  color: #86efac;
+}
+
+.verdict-icon.bad {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
